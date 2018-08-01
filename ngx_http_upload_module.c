@@ -8,13 +8,34 @@
 #include <ngx_http.h>
 #include <nginx.h>
 
-#include <openssl/md5.h>
+#if nginx_version >= 1011002
+        #include <ngx_md5.h>
+        typedef ngx_md5_t MD5_CTX;
+        #define MD5Init ngx_md5_init
+        #define MD5Update ngx_md5_update
+        #define MD5Final ngx_md5_final
+        #define MD5_DIGEST_LENGTH 16
+        #include <openssl/sha.h>
+#else
+        #if (NGX_HAVE_OPENSSL_MD5_H)
+                #include <openssl/md5.h>
+        #else
+                #include <md5.h>
+        #endif
 
-#define  MD5Init    MD5_Init
-#define  MD5Update  MD5_Update
-#define  MD5Final   MD5_Final
+        #if (NGX_OPENSSL_MD5)
+                #define  MD5Init    MD5_Init
+                #define  MD5Update  MD5_Update
+                #define  MD5Final   MD5_Final
+        #endif
 
-#include <openssl/sha.h>
+        #if (NGX_HAVE_OPENSSL_SHA1_H)
+                #include <openssl/sha.h>
+        #else
+                #include <sha.h>
+        #endif
+#endif
+
 
 #define MULTIPART_FORM_DATA_STRING              "multipart/form-data"
 #define BOUNDARY_STRING                         "boundary="
