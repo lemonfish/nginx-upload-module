@@ -1375,19 +1375,19 @@ static ngx_int_t ngx_http_upload_start_handler(ngx_http_upload_ctx_t *u) { /* {{
 
 
 
-        if(u->md5_ctx != NULL && (!u->partial_content || (u->partial_content && file->offset == 0)))
+        if(u->md5_ctx != NULL && !u->partial_content)
             MD5Init(&u->md5_ctx->md5);
 
-        if(u->sha1_ctx != NULL && (!u->partial_content || (u->partial_content && file->offset == 0))) 
+        if(u->sha1_ctx != NULL && !u->partial_content) 
             SHA1_Init(&u->sha1_ctx->sha1);
 
-        if(u->sha256_ctx != NULL && (!u->partial_content || (u->partial_content && file->offset == 0)))
+        if(u->sha256_ctx != NULL && !u->partial_content)
             SHA256_Init(&u->sha256_ctx->sha256);
 
-        if(u->sha512_ctx != NULL && (!u->partial_content || (u->partial_content && file->offset == 0)))
+        if(u->sha512_ctx != NULL && !u->partial_content)
             SHA512_Init(&u->sha512_ctx->sha512);
 
-        if(u->calculate_crc32 && (!u->partial_content || (u->partial_content && file->offset == 0)))
+        if(u->calculate_crc32 && !u->partial_content)
             ngx_crc32_init(u->crc32);
 
         if(u->partial_content) {
@@ -1531,21 +1531,6 @@ static void ngx_http_upload_finish_handler(ngx_http_upload_ctx_t *u) { /* {{{ */
                 return;
             }
 
-            if(u->md5_ctx)
-                MD5Final(u->md5_ctx->md5_digest, &u->md5_ctx->md5);
-
-            if(u->sha1_ctx)
-                SHA1_Final(u->sha1_ctx->sha1_digest, &u->sha1_ctx->sha1);
-
-            if(u->sha256_ctx)
-                SHA256_Final(u->sha256_ctx->sha256_digest, &u->sha256_ctx->sha256);
-
-            if(u->sha512_ctx)
-                SHA512_Final(u->sha512_ctx->sha512_digest, &u->sha512_ctx->sha512);
-
-            if(u->calculate_crc32)
-                ngx_crc32_final(u->crc32);
-
             if(ngx_delete_file(u->state_file.name.data) == NGX_FILE_ERROR) {
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "failed to remove state file \"%V\"", &u->state_file.name);
             } else {
@@ -1650,26 +1635,28 @@ static ngx_int_t ngx_http_upload_flush_output_buffer(ngx_http_upload_ctx_t *u, u
 
     if(u->is_file) {
         if(u->partial_content) {
+
             if(u->output_file.offset > u->content_range_n.end)
                 return NGX_OK;
 
-            if(u->output_file.offset + (off_t)len > u->content_range_n.end + 1)
+            if(u->output_file.offset + (off_t)len > u->content_range_n.end + 1){
                 len = u->content_range_n.end - u->output_file.offset + 1;
+            }
         }
 
-        if(u->md5_ctx)
+        if(u->md5_ctx && !u->partial_content)
             MD5Update(&u->md5_ctx->md5, buf, len);
 
-        if(u->sha1_ctx)
+        if(u->sha1_ctx && !u->partial_content)
             SHA1_Update(&u->sha1_ctx->sha1, buf, len);
 
-        if(u->sha256_ctx)
+        if(u->sha256_ctx && !u->partial_content)
             SHA256_Update(&u->sha256_ctx->sha256, buf, len);
 
-        if(u->sha512_ctx)
+        if(u->sha512_ctx && !u->partial_content)
             SHA512_Update(&u->sha512_ctx->sha512, buf, len);
 
-        if(u->calculate_crc32)
+        if(u->calculate_crc32 && !u->partial_content)
             ngx_crc32_update(&u->crc32, buf, len);
 
         if(ulcf->max_file_size != 0 && !u->partial_content) {
